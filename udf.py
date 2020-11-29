@@ -394,3 +394,38 @@ def drop_duplicates_cols(df, suffixes=['_x', '_y', '_z']):
 
     return df_dropped
 
+
+def transfermarkt_teams_year(league_url, year):
+    '''
+    Function that returns DataFrame for each league and year
+
+    :param league_url (str): string of transfermarkt for each league
+    :param year (str): string of type 'yyyy' signaling year id
+    :return league_df (DataFrame):
+    '''
+
+    # Headers to make request and not get 404 status code
+    headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36'}
+
+    # Format the leagues URL with the year of the season to get data from
+    league_url = league_url.format(year)
+
+    # Get request and parsing
+    requests_url = requests.get(league_url, headers=headers)
+    request_html = BeautifulSoup(requests_url.content)
+    requests_url.close()
+
+    # Parse table from HTML
+    table = request_html.find_all(class_='items')[0]
+    table = parse_table(table)
+    league_df = pd.DataFrame(table[2:], columns=table[0])
+
+    # Paste the team ID for URL purposes
+    links = request_html.find_all(class_='hauptlink no-border-links show-for-small show-for-pad')
+    league_df['squad_code'] = [link.findChild()['id'] for link in links]
+
+    # Paste league url to be able to trace back.
+    league_df['url_scraped'] = league_url
+    
+    return league_df
+
