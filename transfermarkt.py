@@ -15,23 +15,18 @@ leagues_url_list = \
      ('serieA', 'https://www.transfermarkt.com/serie-a/startseite/wettbewerb/IT1/plus/?saison_id={}'),
      ('ligue1', 'https://www.transfermarkt.com/ligue-1/startseite/wettbewerb/FR1/plus/?saison_id={}')]
 
-
 # Create DataFrame of URLs
 leagues_url_df = pd.DataFrame(leagues_url_list, columns=['league', 'url'])
 
+# Seasons to get data from
+years = list(range(2009, 2020))
+years = [str(year) for year in years]
 
+# Test function on premier leaguue year 2009.
+example = udf.transfermarkt_teams_year(leagues_url_list[0][1], '2009')
+example = example.drop(columns='Club')
+example.columns = ['club_name', 'name', 'squad_size', 'avg_age', 'foreigners_quantity',
+                   'total_market_value', 'avg_market_value', 'total_mv', 'avg_mv', 'squad_code', 'url_scraped']
 
-
-requests_url = requests.get(league_url, headers=headers)
-request_html = BeautifulSoup(requests_url.content)
-requests_url.close()
-
-
-tabla = request_html.find_all(class_='items')[0]
-tabla = udf.parse_table(tabla)
-tabla_df = pd.DataFrame(tabla[1:], columns=tabla[0])
-tabla_df = tabla_df.iloc[1:].reset_index(drop=True)
-
-links = request_html.find_all(class_ = 'hauptlink no-border-links show-for-small show-for-pad')
-tabla_df['squad_code'] = [link.findChild()['id'] for link in links]
+example.iloc[0]
 
