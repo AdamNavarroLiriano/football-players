@@ -426,6 +426,6 @@ def transfermarkt_teams_year(league_url, year):
 
     # Paste league url to be able to trace back.
     league_df['url_scraped'] = league_url
-    
+
     return league_df
 
