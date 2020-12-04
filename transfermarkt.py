@@ -22,7 +22,6 @@ leagues_url_df = pd.DataFrame(leagues_url_list, columns=['league', 'url'])
 years = list(range(2009, 2020))
 years = [str(year) for year in years]
 
-
 # Iterate over leagues and years and compile on DataFrame
 leagues_data_all_seasons = pd.DataFrame()
 
@@ -38,3 +37,20 @@ for league in leagues_url_list:
 
         # Append to compilation
         leagues_data_all_seasons = pd.concat([leagues_data_all_seasons, league_year_df], ignore_index=True)
+
+
+leagues_data_all_seasons.to_csv('Data/transfermarkt_league_data.csv', index=False)
+
+
+# Transfers per team per season
+teams_df = leagues_data_all_seasons[['club_name', 'name', 'squad_code']].drop_duplicates().reset_index(drop=True)
+teams_df
+
+transfer_url = 'https://www.transfermarkt.com/borussia-dortmund/transfers/verein/16/saison_id/2020'
+
+teams_df.iloc[0]
+
+teams_df.loc[teams_df.name.str.lower().str.match('(bayern)')].iloc[0]
+
+leagues_data_all_seasons.loc[leagues_data_all_seasons.name.str.lower().\
+    str.match('bayern')].iloc[0].url_scraped

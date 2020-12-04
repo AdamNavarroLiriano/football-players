@@ -423,9 +423,9 @@ def transfermarkt_teams_year(league_url, year):
     # Paste the team ID for URL purposes
     links = request_html.find_all(class_='hauptlink no-border-links show-for-small show-for-pad')
     league_df['squad_code'] = [link.findChild()['id'] for link in links]
-
+    league_df['squad_url'] = [link.findChild()['href'] for link in links]
+   
     # Paste league url to be able to trace back.
     league_df['url_scraped'] = league_url
 
     return league_df
-
