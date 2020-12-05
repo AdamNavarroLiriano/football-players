@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from time import sleep
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.chrome.options import Options
-from secrets import selenium_directory
+from secrets_variables import selenium_directory
 
 def parse_table(table):
     """ Get data from table """
