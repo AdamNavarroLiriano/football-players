@@ -5,6 +5,7 @@ import udf
 import requests
 from bs4 import BeautifulSoup
 
+
 headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36'}
 
 # Get the url format of top 5 european leagues
@@ -33,18 +34,18 @@ for league in leagues_url_list:
         league_year_df = udf.transfermarkt_teams_year(league[1], year)
         league_year_df = league_year_df.drop(columns='Club')
         league_year_df.columns = ['club_name', 'name', 'squad_size', 'avg_age', 'foreigners_quantity',
-                                  'total_market_value', 'avg_market_value', 'total_mv', 'avg_mv', 'squad_code', 'url_scraped']
+                                  'total_market_value', 'avg_market_value', 'total_mv', 'avg_mv', 'squad_code', 'squad_url', 'url_scraped']
 
         # Append to compilation
         leagues_data_all_seasons = pd.concat([leagues_data_all_seasons, league_year_df], ignore_index=True)
 
-
+leagues_data_all_seasons['squad_name_in_url'] = leagues_data_all_seasons['squad_url'].str.extract('^/(.*)/startseite')
 leagues_data_all_seasons.to_csv('Data/transfermarkt_league_data.csv', index=False)
 
 
 # Transfers per team per season
-teams_df = leagues_data_all_seasons[['club_name', 'name', 'squad_code']].drop_duplicates().reset_index(drop=True)
-teams_df
+teams_df = leagues_data_all_seasons[['club_name', 'name', 'squad_code', 'squad_name_in_url']].drop_duplicates().reset_index(drop=True)
+
 
 transfer_url = 'https://www.transfermarkt.com/borussia-dortmund/transfers/verein/16/saison_id/2020'
 
