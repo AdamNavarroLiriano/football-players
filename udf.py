@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from time import sleep
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.chrome.options import Options
-
+from secrets import selenium_directory
 
 def parse_table(table):
     """ Get data from table """
@@ -47,9 +47,8 @@ def get_team_data(id, season, team):
     chrome_options = Options()
     chrome_options.add_argument("--headless")
 
-    driver = webdriver.Chrome(
-        r'C:\Users\ASUS\Documents\AFI Escuela de Finanzas\Trimestre 1\Datos abiertos y Visualizacion\Practica\selenium\chromedriver',
-        chrome_options=chrome_options)
+    driver = webdriver.Chrome(selenium_directory,
+                              chrome_options=chrome_options)
 
     driver.get(team_url_root)
     team_html = BeautifulSoup(driver.page_source, 'html.parser')
@@ -248,8 +247,7 @@ def get_leagues_links():
     '''
 
     url = 'https://www.whoscored.com/Statistics'
-    driver = webdriver.Chrome(
-        r'C:\Users\ASUS\Documents\AFI Escuela de Finanzas\Trimestre 1\Datos abiertos y Visualizacion\Practica\selenium\chromedriver')
+    driver = webdriver.Chrome(selenium_directory)
 
     # Open Browser and get top 5 leagues URLs
     driver.get(url)
@@ -280,8 +278,7 @@ def get_seasons_standings(url, season):
 
 
     # Open browser, select season and get page HTML
-    driver = webdriver.Chrome(
-        r'C:\Users\ASUS\Documents\AFI Escuela de Finanzas\Trimestre 1\Datos abiertos y Visualizacion\Practica\selenium\chromedriver')
+    driver = webdriver.Chrome(selenium_directory)
     driver.get(url_league)
     sleep(1.5)
 
@@ -424,7 +421,7 @@ def transfermarkt_teams_year(league_url, year):
     links = request_html.find_all(class_='hauptlink no-border-links show-for-small show-for-pad')
     league_df['squad_code'] = [link.findChild()['id'] for link in links]
     league_df['squad_url'] = [link.findChild()['href'] for link in links]
-   
+
     # Paste league url to be able to trace back.
     league_df['url_scraped'] = league_url
 
