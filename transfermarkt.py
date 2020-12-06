@@ -5,7 +5,6 @@ import udf
 import requests
 from bs4 import BeautifulSoup
 
-
 headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36'}
 
 # Get the url format of top 5 european leagues
@@ -47,11 +46,5 @@ leagues_data_all_seasons.to_csv('Data/transfermarkt_league_data.csv', index=Fals
 teams_df = leagues_data_all_seasons[['club_name', 'name', 'squad_code', 'squad_name_in_url']].drop_duplicates().reset_index(drop=True)
 
 
-transfer_url = 'https://www.transfermarkt.com/borussia-dortmund/transfers/verein/16/saison_id/2020'
+udf.get_teams_seasons_transfers()
 
-teams_df.iloc[0]
-
-teams_df.loc[teams_df.name.str.lower().str.match('(bayern)')].iloc[0]
-
-leagues_data_all_seasons.loc[leagues_data_all_seasons.name.str.lower().\
-    str.match('bayern')].iloc[0].url_scraped
