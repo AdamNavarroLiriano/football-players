@@ -4,6 +4,7 @@ import numpy as np
 import udf
 import requests
 from bs4 import BeautifulSoup
+from time import sleep
 
 headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36'}
 
@@ -61,3 +62,4 @@ for idx, row in teams_df.iterrows():
         # Append to DataFrames
         arrivals_df = pd.concat([arrivals_df, team_season_arrivals], ignore_index=True)
         departures_df = pd.concat([departures_df, team_season_departures], ignore_index=True)
+        sleep(np.random.randint(0, 5, 1))
