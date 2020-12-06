@@ -426,3 +426,46 @@ def transfermarkt_teams_year(league_url, year):
     league_df['url_scraped'] = league_url
 
     return league_df
+
+def get_teams_seasons_transfers(team_name_url, squad_code, year):
+    '''
+
+    :param team_name_url (str): string acceptable by transfermarkt for each team. example fc-chelsea
+    :param squad_code (str): numeric code transfermarkt uses to identify each team
+    :param year (str): string of type yyyy for the window
+    :return:
+    '''
+
+
+    # Format URL, check transfermarkt webpage to make sure it works
+    transfer_url = f'https://www.transfermarkt.com/{team_name_url}/transfers/verein/{squad_code}/plus/0?saison_id={year}&pos=&detailpos=&w_s='
+
+    # Headers to make request and not get 404 status code
+    headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36'}
+
+    # Make request and get the two tables corresponding to arrivals and departures
+    url_request = requests.get(transfer_url, headers=headers)
+    html_content = BeautifulSoup(url_request.content)
+    tables_transfers = html_content.find_all(class_='responsive-table')
+
+    # Arrivals
+    arrivals_list = parse_table(tables_transfers[0])
+    arrivals_list_players = [element for element in arrivals_list if len(element) >= 5]
+    arrivals_df = pd.DataFrame(arrivals_list_players[1:])
+    arrivals_df = arrivals_df.iloc[:, [3, 4, 5, 9, 10, 11]]
+    arrivals_df.columns = ['player_name', 'position', 'age', 'origin_squad', 'origin_league', 'fee']
+    arrivals_df['destination_squad'] = team_name_url
+    arrivals_df['year'] = year
+
+    # Departures
+    departures_list = parse_table(tables_transfers[1])
+    departures_list_players = [element for element in departures_list if len(element) >= 5]
+    departures_df = pd.DataFrame(departures_list_players[1:])
+    departures_df = departures_df.iloc[:, [3, 4, 5, 9, 10, 11]]
+    departures_df.iloc[0]
+    departures_df.columns = ['player_name', 'position', 'age', 'destination_squad', 'destination_league', 'fee']
+    departures_df['origin_squad'] = team_name_url
+    departures_df['year'] = year
+
+    # Return tuple with both tables
+    return (arrivals_df, departures_df)
