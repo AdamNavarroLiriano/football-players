@@ -45,6 +45,19 @@ leagues_data_all_seasons.to_csv('Data/transfermarkt_league_data.csv', index=Fals
 # Transfers per team per season
 teams_df = leagues_data_all_seasons[['club_name', 'name', 'squad_code', 'squad_name_in_url']].drop_duplicates().reset_index(drop=True)
 
+# Create DataFrames that will contain all data
+arrivals_df = pd.DataFrame()
+departures_df = pd.DataFrame()
 
-udf.get_teams_seasons_transfers()
+for idx, row in teams_df.iterrows():
+    for year in years:
+        # Print message
+        print('Getting data from {}. Season {}'.format(row.squad_name_in_url, year))
 
+        # Get team season data
+        team_season_arrivals, team_season_departures = udf.get_teams_seasons_transfers(row.squad_name_in_url,
+                                                                                       row.squad_code,
+                                                                                       year)
+        # Append to DataFrames
+        arrivals_df = pd.concat([arrivals_df, team_season_arrivals], ignore_index=True)
+        departures_df = pd.concat([departures_df, team_season_departures], ignore_index=True)
