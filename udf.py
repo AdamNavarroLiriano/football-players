@@ -447,6 +447,7 @@ def get_teams_seasons_transfers(team_name_url, squad_code, year):
     url_request = requests.get(transfer_url, headers=headers)
     html_content = BeautifulSoup(url_request.content)
     tables_transfers = html_content.find_all(class_='responsive-table')
+    url_request.close()
 
     # Arrivals
     arrivals_list = parse_table(tables_transfers[0])
