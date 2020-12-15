@@ -427,7 +427,7 @@ def transfermarkt_teams_year(league_url, year):
 
     return league_df
 
-def get_teams_seasons_transfers(team_name_url, squad_code, year):
+def get_teams_seasons_transfers(team_name_url, squad_code, year, window):
     '''
 
     :param team_name_url (str): string acceptable by transfermarkt for each team. example fc-chelsea
@@ -438,7 +438,7 @@ def get_teams_seasons_transfers(team_name_url, squad_code, year):
 
 
     # Format URL, check transfermarkt webpage to make sure it works
-    transfer_url = f'https://www.transfermarkt.com/{team_name_url}/transfers/verein/{squad_code}/plus/0?saison_id={year}&pos=&detailpos=&w_s='
+    transfer_url = f'https://www.transfermarkt.com/{team_name_url}/transfers/verein/{squad_code}/plus/0?saison_id={year}&pos=&detailpos=&w_s={window}'
 
     # Headers to make request and not get 404 status code
     headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36'}
@@ -457,6 +457,7 @@ def get_teams_seasons_transfers(team_name_url, squad_code, year):
     arrivals_df.columns = ['player_name', 'position', 'age', 'origin_squad', 'origin_league', 'fee']
     arrivals_df['destination_squad'] = team_name_url
     arrivals_df['year'] = year
+    arrivals_df['window'] = window
 
     # Departures
     departures_list = parse_table(tables_transfers[1])
@@ -466,7 +467,7 @@ def get_teams_seasons_transfers(team_name_url, squad_code, year):
     departures_df.columns = ['player_name', 'position', 'age', 'destination_squad', 'destination_league', 'fee']
     departures_df['origin_squad'] = team_name_url
     departures_df['year'] = year
-
+    departures_df['window'] = window
 
     # Players URL from transfers lists
     arrivals_links = tables_transfers[0].find_all(class_='spielprofil_tooltip')

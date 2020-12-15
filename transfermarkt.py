@@ -55,32 +55,39 @@ missing_data = []
 
 for idx, row in teams_df.iterrows():
     for year in years:
-        # Print message
-        print('Getting data from {}. Season {}. Team {}/{}'.format(row.squad_name_in_url, year, idx+1, teams_df.shape[0]))
+        for window in ['s' 'w']:
+            # Print message
+            print('Getting data from {}. Season {}. Window {}. Team {}/{}'.format(row.squad_name_in_url, year, window, idx+1, teams_df.shape[0]))
 
-        # 3 tries to get the data, if not pass
-        flag = 0
-        for i in range(3):
-            if flag == 0:
-                try:
-                    # Get team season data
-                    team_season_arrivals, team_season_departures = udf.get_teams_seasons_transfers(row.squad_name_in_url,
-                                                                                                   row.squad_code,
-                                                                                                   year)
-                    # Append to DataFrames
-                    arrivals_df = pd.concat([arrivals_df, team_season_arrivals], ignore_index=True)
-                    departures_df = pd.concat([departures_df, team_season_departures], ignore_index=True)
-                    sleep(2.5)
+            # 3 tries to get the data, if not pass
+            flag = 0
+            for i in range(3):
+                if flag == 0:
+                    try:
+                        # Get team season data
+                        team_season_arrivals, team_season_departures = udf.get_teams_seasons_transfers(row.squad_name_in_url,
+                                                                                                       row.squad_code,
+                                                                                                       year,
+                                                                                                       window)
+                        # Append to DataFrames
+                        arrivals_df = pd.concat([arrivals_df, team_season_arrivals], ignore_index=True)
+                        departures_df = pd.concat([departures_df, team_season_departures], ignore_index=True)
+                        sleep(2.5)
 
 
-                    # Break out of tries
-                    flag = 1
+                        # Break out of tries
+                        flag = 1
 
-                except:
-                    print('Not possible to get data')
-                    missing_data.append(row)
-            else:
-                break
+                    except:
+                        print('Not possible to get data')
+                        missing_data.append(row)
+                else:
+                    break
 
 arrivals_df.to_csv('Data/arrivals_df.csv', index=False)
 departures_df.to_csv('Data/departures_df.csv', index=False)
+
+
+# Players worth
+purchases_df = arrivals_df.loc[~arrivals_df.fee.str.match('.*(loan)')].reset_index(drop=True)
+purchases_df.loc[purchases_df.player_name == 'Kevin-Prince Boateng', ['destination_squad', 'fee', 'year']].sort_values(by='year')
