@@ -42,6 +42,7 @@ for league in leagues_url_list:
 leagues_data_all_seasons['squad_name_in_url'] = leagues_data_all_seasons['squad_url'].str.extract('^/(.*)/startseite')
 leagues_data_all_seasons.to_csv('Data/transfermarkt_league_data.csv', index=False)
 
+#leagues_data_all_seasons = pd.read_csv('Data/transfermarkt_league_data.csv')
 
 # Transfers per team per season
 teams_df = leagues_data_all_seasons[['club_name', 'name', 'squad_code', 'squad_name_in_url']].drop_duplicates().reset_index(drop=True)
@@ -50,16 +51,36 @@ teams_df = leagues_data_all_seasons[['club_name', 'name', 'squad_code', 'squad_n
 arrivals_df = pd.DataFrame()
 departures_df = pd.DataFrame()
 
+missing_data = []
+
 for idx, row in teams_df.iterrows():
     for year in years:
         # Print message
-        print('Getting data from {}. Season {}'.format(row.squad_name_in_url, year))
+        print('Getting data from {}. Season {}. Team {}/{}'.format(row.squad_name_in_url, year, idx+1, teams_df.shape[0]))
 
-        # Get team season data
-        team_season_arrivals, team_season_departures = udf.get_teams_seasons_transfers(row.squad_name_in_url,
-                                                                                       row.squad_code,
-                                                                                       year)
-        # Append to DataFrames
-        arrivals_df = pd.concat([arrivals_df, team_season_arrivals], ignore_index=True)
-        departures_df = pd.concat([departures_df, team_season_departures], ignore_index=True)
-        sleep(np.random.randint(0, 5, 1))
+        # 3 tries to get the data, if not pass
+        flag = 0
+        for i in range(3):
+            if flag == 0:
+                try:
+                    # Get team season data
+                    team_season_arrivals, team_season_departures = udf.get_teams_seasons_transfers(row.squad_name_in_url,
+                                                                                                   row.squad_code,
+                                                                                                   year)
+                    # Append to DataFrames
+                    arrivals_df = pd.concat([arrivals_df, team_season_arrivals], ignore_index=True)
+                    departures_df = pd.concat([departures_df, team_season_departures], ignore_index=True)
+                    sleep(2.5)
+
+
+                    # Break out of tries
+                    flag = 1
+
+                except:
+                    print('Not possible to get data')
+                    missing_data.append(row)
+            else:
+                break
+
+arrivals_df.to_csv('Data/arrivals_df.csv', index=False)
+departures_df.to_csv('Data/departures_df.csv', index=False)
