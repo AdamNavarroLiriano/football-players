@@ -463,10 +463,18 @@ def get_teams_seasons_transfers(team_name_url, squad_code, year):
     departures_list_players = [element for element in departures_list if len(element) >= 5]
     departures_df = pd.DataFrame(departures_list_players[1:])
     departures_df = departures_df.iloc[:, [3, 4, 5, 9, 10, 11]]
-    departures_df.iloc[0]
     departures_df.columns = ['player_name', 'position', 'age', 'destination_squad', 'destination_league', 'fee']
     departures_df['origin_squad'] = team_name_url
     departures_df['year'] = year
+
+
+    # Players URL from transfers lists
+    arrivals_links = tables_transfers[0].find_all(class_='spielprofil_tooltip')
+    arrivals_df['arrival_link'] = [link['href'] for link in arrivals_links]
+
+    departures_links = tables_transfers[1].find_all(class_='spielprofil_tooltip')
+    departures_df['departure_link'] = [link['href'] for link in departures_links]
+
 
     # Return tuple with both tables
     return (arrivals_df, departures_df)
