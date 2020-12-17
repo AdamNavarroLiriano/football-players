@@ -1,4 +1,3 @@
-
 import pandas as pd
 import numpy as np
 import udf
@@ -50,12 +49,11 @@ teams_df = leagues_data_all_seasons[['club_name', 'name', 'squad_code', 'squad_n
 # Create DataFrames that will contain all data
 arrivals_df = pd.DataFrame()
 departures_df = pd.DataFrame()
-
 missing_data = []
 
 for idx, row in teams_df.iterrows():
     for year in years:
-        for window in ['s' 'w']:
+        for window in ['s','w']:
             # Print message
             print('Getting data from {}. Season {}. Window {}. Team {}/{}'.format(row.squad_name_in_url, year, window, idx+1, teams_df.shape[0]))
 
@@ -72,7 +70,7 @@ for idx, row in teams_df.iterrows():
                         # Append to DataFrames
                         arrivals_df = pd.concat([arrivals_df, team_season_arrivals], ignore_index=True)
                         departures_df = pd.concat([departures_df, team_season_departures], ignore_index=True)
-                        sleep(2.5)
+                        sleep(1)
 
 
                         # Break out of tries
@@ -86,7 +84,6 @@ for idx, row in teams_df.iterrows():
 
 arrivals_df.to_csv('Data/arrivals_df.csv', index=False)
 departures_df.to_csv('Data/departures_df.csv', index=False)
-
 
 # Players worth
 purchases_df = arrivals_df.loc[~arrivals_df.fee.str.match('.*(loan)')].reset_index(drop=True)
