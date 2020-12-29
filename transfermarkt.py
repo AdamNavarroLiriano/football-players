@@ -85,6 +85,25 @@ for idx, row in teams_df.iterrows():
 arrivals_df.to_csv('Data/arrivals_df.csv', index=False)
 departures_df.to_csv('Data/departures_df.csv', index=False)
 
-# Players worth
-purchases_df = arrivals_df.loc[~arrivals_df.fee.str.match('.*(loan)')].reset_index(drop=True)
-purchases_df.loc[purchases_df.player_name == 'Kevin-Prince Boateng', ['destination_squad', 'fee', 'year']].sort_values(by='year')
+
+# Reading data
+arrivals_df = pd.read_csv('Data/arrivals_df.csv')
+departures_df = pd.read_csv('Data/departures_df.csv')
+
+
+# Players worth, avoiding end of loans and unknown transfers
+purchases_df = arrivals_df.loc[(arrivals_df.fee.notna()) & (arrivals_df.fee.notnull())].reset_index(drop=True)
+purchases_df = purchases_df.loc[~purchases_df.fee.str.match('.*(loan)')].reset_index(drop=True)
+purchases_df = purchases_df.loc[purchases_df.fee != '?'].reset_index(drop=True)
+purchases_df.loc[purchases_df.fee == '-', 'fee'] = 0
+
+
+# Clean players prices by creating loans flag and transform column to numeric
+purchases_df['loan'] = np.where((purchases_df.fee.str.lower().str.contains('.*(fee)',na=True)) &
+                                (purchases_df.fee != 0), 1, 0)
+
+# Create a copy and go over cases
+purchases_df['purchase_price'] = purchases_df['fee']
+purchases_df['purchase_price'] = np.where(purchases_df.purchase_price == 'free transfer', 0, purchases_df. purchase_price)
+purchases_df['purchase_price'] = purchases_df['purchase_price'].astype(str).str.lstrip('€')
+purchases_df.purchase_price.str.extract('([A-Za-z]+)')
