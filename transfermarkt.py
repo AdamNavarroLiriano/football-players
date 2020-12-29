@@ -7,6 +7,9 @@ from time import sleep
 
 headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36'}
 
+
+
+# <editor-fold desc="TEAM DATA">
 # Get the url format of top 5 european leagues
 leagues_url_list = \
     [('premier league', 'https://www.transfermarkt.com/premier-league/startseite/wettbewerb/GB1/plus/?saison_id={}'),
@@ -40,9 +43,12 @@ for league in leagues_url_list:
 
 leagues_data_all_seasons['squad_name_in_url'] = leagues_data_all_seasons['squad_url'].str.extract('^/(.*)/startseite')
 leagues_data_all_seasons.to_csv('Data/transfermarkt_league_data.csv', index=False)
+# </editor-fold>
 
 #leagues_data_all_seasons = pd.read_csv('Data/transfermarkt_league_data.csv')
 
+
+# <editor-fold desc="TRANSFERS PER TEAM PER SEASON">
 # Transfers per team per season
 teams_df = leagues_data_all_seasons[['club_name', 'name', 'squad_code', 'squad_name_in_url']].drop_duplicates().reset_index(drop=True)
 
@@ -84,13 +90,15 @@ for idx, row in teams_df.iterrows():
 
 arrivals_df.to_csv('Data/arrivals_df.csv', index=False)
 departures_df.to_csv('Data/departures_df.csv', index=False)
+# </editor-fold>
+
 
 
 # Reading data
 arrivals_df = pd.read_csv('Data/arrivals_df.csv')
 departures_df = pd.read_csv('Data/departures_df.csv')
 
-
+# <editor-fold desc="CLEANING PURCHASES">
 # Players worth, avoiding end of loans and unknown transfers
 purchases_df = arrivals_df.loc[(arrivals_df.fee.notna()) & (arrivals_df.fee.notnull())].reset_index(drop=True)
 purchases_df = purchases_df.loc[~purchases_df.fee.str.match('.*(loan)')].reset_index(drop=True)
@@ -102,8 +110,31 @@ purchases_df.loc[purchases_df.fee == '-', 'fee'] = 0
 purchases_df['loan'] = np.where((purchases_df.fee.str.lower().str.contains('.*(fee)',na=True)) &
                                 (purchases_df.fee != 0), 1, 0)
 
+
 # Create a copy and go over cases
 purchases_df['purchase_price'] = purchases_df['fee']
-purchases_df['purchase_price'] = np.where(purchases_df.purchase_price == 'free transfer', 0, purchases_df. purchase_price)
+purchases_df['purchase_price'] = np.where(purchases_df.purchase_price == 'free transfer', 0, purchases_df.purchase_price)
 purchases_df['purchase_price'] = purchases_df['purchase_price'].astype(str).str.lstrip('€')
-purchases_df.purchase_price.str.extract('([A-Za-z]+)')
+
+
+# Calculate  purchases magnitudes a transform to numeric finally
+purchases_df['magnitude_sale'] = purchases_df.purchase_price.str.extract('([A-Za-z]+.?$)')
+purchases_df.dropna().magnitude_sale.value_counts()
+purchases_df['value_transfer'] = purchases_df.purchase_price.astype(str).str.lower().str.replace('([A-Za-z :€])', '').str.strip()
+purchases_df['value_transfer'] = np.where(purchases_df['value_transfer'] == '', '0', purchases_df['value_transfer'])
+
+np.sort(purchases_df.value_transfer.unique())
+
+purchases_df['purchase_price'] = np.where(purchases_df.magnitude_sale == 'm',
+                                          purchases_df.value_transfer.astype(float) * 1e6,
+                                          np.where(purchases_df.magnitude_sale == 'Th.',
+                                                   purchases_df.value_transfer.astype(float) * 1e3,
+                                                   purchases_df.value_transfer))
+
+purchases_df['purchase_price'] = purchases_df.purchase_price.astype(float)
+
+
+# Drop auxiliary columns
+purchases_df = purchases_df.drop(columns=['fee', 'magnitude_sale', 'value_transfer'])
+purchases_df.purchase_price.mean()
+# </editor-fold>
