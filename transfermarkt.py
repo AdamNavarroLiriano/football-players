@@ -192,3 +192,12 @@ mv_df = mv_df.apply(lambda x: x.str.replace("'", ''))
 stats_request = requests.get(detailed_stats_url, headers=headers)
 stats_html = BeautifulSoup(stats_request.content)
 stats_request.close()
+
+stats_table = udf.parse_table(stats_html.find(class_='items'))
+cols_names = ['season', 'competition','squad_capped', 'games_played', 'points_per_game',
+              'goals', 'assists', 'own_goals', 'subbed_in', 'subbed_out',
+              'yellow_cards', 'double_yellow', 'red_card', 'penalty_goals', 'mins_per_goal', 'mins_played']
+
+
+stats_table_df = pd.DataFrame(stats_table[2:]).drop(labels=[1,3], axis=1)
+stats_table_df.columns = cols_names
