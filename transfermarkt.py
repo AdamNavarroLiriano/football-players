@@ -2,12 +2,11 @@ import pandas as pd
 import numpy as np
 import udf
 import requests
+import re
 from bs4 import BeautifulSoup
 from time import sleep
 
 headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36'}
-
-
 
 # <editor-fold desc="TEAM DATA">
 # Get the url format of top 5 european leagues
@@ -46,7 +45,6 @@ leagues_data_all_seasons.to_csv('Data/transfermarkt_league_data.csv', index=Fals
 # </editor-fold>
 
 #leagues_data_all_seasons = pd.read_csv('Data/transfermarkt_league_data.csv')
-
 
 # <editor-fold desc="TRANSFERS PER TEAM PER SEASON">
 # Transfers per team per season
@@ -92,8 +90,6 @@ arrivals_df.to_csv('Data/arrivals_df.csv', index=False)
 departures_df.to_csv('Data/departures_df.csv', index=False)
 # </editor-fold>
 
-
-
 # Reading data
 arrivals_df = pd.read_csv('Data/arrivals_df.csv')
 departures_df = pd.read_csv('Data/departures_df.csv')
@@ -138,3 +134,61 @@ purchases_df['purchase_price'] = purchases_df.purchase_price.astype(float)
 purchases_df = purchases_df.drop(columns=['fee', 'magnitude_sale', 'value_transfer'])
 purchases_df.purchase_price.mean()
 # </editor-fold>
+
+
+# CREATE
+transfers_url = 'https://www.transfermarkt.com/willian/transfers/spieler/52769'
+mv_url = 'https://www.transfermarkt.com/willian/marktwertverlauf/spieler/52769'
+player_url = 'https://www.transfermarkt.com/thomas-partey/profil/spieler/230784'
+simple_stats_url = 'https://www.transfermarkt.com/thomas-partey/leistungsdatendetails/spieler/230784'
+detailed_stats_url = 'https://www.transfermarkt.com/thomas-partey/leistungsdatendetails/spieler/230784/saison//verein/0/liga/0/wettbewerb//pos/0/trainer_id/0/plus/1'
+
+# Getting transfers and historical
+player_request = requests.get(player_url, headers=headers)
+player_html = BeautifulSoup(player_request.content)
+player_request.close()
+
+player_transfers_table = player_html.find(class_='responsive-table')
+player_transfers_table = udf.parse_table(player_transfers_table)
+
+player_transfer_df = pd.DataFrame(player_transfers_table[1:-1])
+player_transfer_df = player_transfer_df.iloc[:, [0,1,4,7,8,9]]
+player_transfer_df.columns = player_transfers_table[0][0:-1]
+
+teams_links = player_html.find_all(class_='hauptlink no-border-links vereinsname')
+teams_left = [team.find(class_='vereinprofil_tooltip')['href'] for team in teams_links[0::2]]
+teams_joined = [team.find(class_='vereinprofil_tooltip')['href'] for team in teams_links[1::2]]
+
+player_transfer_df['teams_left_link'] = teams_left
+player_transfer_df['teams_joined_link'] = teams_joined
+
+
+# Misc info like position, height, dominant foot
+main_position = player_html.find(class_='hauptposition-left').text.strip().replace('  ', '').replace('Main position:', '')
+secondary_positions = player_html.find(class_='nebenpositionen').text.strip().replace(r'  ', ' ').\
+    replace('Other position:\n', '')
+secondary_positions = [position for position in secondary_positions.split('  ') if position != '']
+
+foot = udf.parse_table(player_html.find_all(class_='auflistung')[2])[-7][1]
+
+height = udf.parse_table(player_html.find_all(class_='auflistung')[2])[4][1].replace('\xa0', '')
+
+
+# Market value dataframe
+html_str = str(player_html)
+pattern = re.compile(r"'data':(.*)}\],")
+mv_string = pattern.findall(html_str)[0]
+mv_string = mv_string.encode().decode('unicode_escape')
+
+mv_df = pd.DataFrame(zip(re.findall("'verein':(.*?),'age'", mv_string),
+                         re.findall("'mw':(.*?),'datum_mw'", mv_string),
+                         re.findall("'datum_mw':(.*?),'x'", mv_string),
+                         re.findall("'age':(.*?),'mw'", mv_string)), columns=['team', 'market_value', 'date', 'age'])
+
+mv_df = mv_df.apply(lambda x: x.str.replace("'", ''))
+
+
+# Historical performance
+stats_request = requests.get(detailed_stats_url, headers=headers)
+stats_html = BeautifulSoup(stats_request.content)
+stats_request.close()
