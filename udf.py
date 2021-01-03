@@ -531,25 +531,48 @@ def get_player_summary(player_name, player_code):
 
     # Retrieving links for future joins etc
     teams_links = player_html.find_all(class_='hauptlink no-border-links vereinsname')
-    teams_left = [team.find(class_='vereinprofil_tooltip')['href'] for team in teams_links[0::2]]
-    teams_joined = [team.find(class_='vereinprofil_tooltip')['href'] for team in teams_links[1::2]]
+    teams_left = [team.text for team in teams_links[0::2]]
+    teams_joined = [team.text for team in teams_links[1::2]]
 
+    player_transfer_df = player_transfer_df.loc[
+        ~(player_transfer_df.season.str.lower().str.strip().isin(['upcoming transfer',
+                                                                  'transfer history']))].reset_index(drop=True)
     player_transfer_df['teams_left_link'] = teams_left
     player_transfer_df['teams_joined_link'] = teams_joined
 
     # Clean monetary values
+    player_transfer_df = player_transfer_df.loc[player_transfer_df.fee != 'End of loan'].reset_index(drop=True)
+    player_transfer_df['loan'] = np.where((player_transfer_df.fee.str.lower().str.contains('.*(loan|fee)', na=True)) &
+                                          (player_transfer_df.fee != 0), 1, 0)
+    player_transfer_df['known_fee'] = np.where(player_transfer_df.fee == '?', 0, 1)
+    player_transfer_df['fee'] = np.where(player_transfer_df.fee == '?', '0', player_transfer_df.fee)
     player_transfer_df = clean_transfermarkt_monetary(player_transfer_df, 'mv')
     player_transfer_df = clean_transfermarkt_monetary(player_transfer_df, 'fee')
 
     # Misc info like position, height, dominant foot-------------
-    main_position = player_html.find(class_='hauptposition-left').text.strip().replace('  ', '').replace(
-        'Main position:', '')
-    secondary_positions = player_html.find(class_='nebenpositionen').text.strip().replace(r'  ', ' '). \
-        replace('Other position:\n', '')
-    secondary_positions = [position for position in secondary_positions.split('  ') if position != '']
+    try:
+        main_position = player_html.find(class_='hauptposition-left').text.strip().replace('  ', '').replace(
+            'Main position:', '').lower()
+    except:
+        try:
+            main_position = player_html.find(class_='hauptposition-center').text.strip().replace('  ', '').replace('Main position:', '').lower()
+        except:
+            main_position = 'None'
 
-    foot = parse_table(player_html.find_all(class_='auflistung')[2])[-7][1]
-    height = parse_table(player_html.find_all(class_='auflistung')[2])[4][1].replace('\xa0', '')
+    try:
+        secondary_positions = player_html.find(class_='nebenpositionen').text.strip().replace(r'  ', ' '). \
+            replace('Other position:\n', '')
+        secondary_positions = [position for position in secondary_positions.split('  ') if position != '']
+    except:
+        secondary_positions = ['No']
+
+    misc_data = parse_table(player_html.find_all(class_='auflistung')[2])
+    misc_data = [misc for misc in misc_data if misc[0].lower() in ['citizenship:', 'foot:', 'height:']]
+
+    foot = misc_data[2][1]
+    height = misc_data[0][1].replace('\xa0', '')
+    citizenship = misc_data[1][1].lower()
+
 
     # Market value dataframe----------------
     html_str = str(player_html)
@@ -573,21 +596,28 @@ def get_player_summary(player_name, player_code):
     stats_request.close()
 
     stats_table = parse_table(stats_html.find(class_='items'))
-    cols_names = ['season', 'competition', 'squad_capped', 'games_played', 'points_per_game',
-                  'goals', 'assists', 'own_goals', 'subbed_in', 'subbed_out',
-                  'yellow_cards', 'double_yellow', 'red_card', 'penalty_goals', 'mins_per_goal', 'mins_played']
 
-    stats_table_df = pd.DataFrame(stats_table[2:]).drop(labels=[1, 3], axis=1)
-    stats_table_df.columns = cols_names
+    if main_position != 'goalkeeper':
+        cols_names = ['season', 'competition', 'squad_capped', 'games_played', 'points_per_game',
+                      'goals', 'assists', 'own_goals', 'subbed_in', 'subbed_out',
+                      'yellow_cards', 'double_yellow', 'red_card', 'penalty_goals', 'mins_per_goal', 'mins_played']
+
+        stats_table_df = pd.DataFrame(stats_table[2:]).drop(labels=[1, 3], axis=1)
+        stats_table_df.columns = cols_names
+    else:
+        cols_names = ['season', 'competition', 'squad_capped', 'games_played', 'points_per_game',
+                      'goals', 'own_goals', 'subbed_in', 'subbed_out',
+                      'yellow_cards', 'double_yellow', 'red_card', 'goals_conceded', 'clean_sheets', 'mins_played']
+
+        stats_table_df = pd.DataFrame(stats_table[2:]).drop(labels=[1, 3], axis=1)
+        stats_table_df.columns = cols_names
 
     teams_seasons = stats_html.find_all(class_='hauptlink no-border-rechts zentriert')
     teams_seasons = [team_season.findChild()['href'] for team_season in teams_seasons]
     teams_seasons = [re.search('/(.*?)/', team_season).group().replace('/', '') for team_season in teams_seasons]
     stats_table_df['squad'] = teams_seasons
 
-    cols_cleaning_stats = ['squad_capped', 'games_played', 'points_per_game', 'goals', 'assists', 'own_goals',
-                           'subbed_in', 'subbed_out', 'yellow_cards', 'double_yellow', 'red_card', 'penalty_goals',
-                           'mins_per_goal', 'mins_played']
+    cols_cleaning_stats = [col for col in stats_table_df.columns if col not in ['season', 'competition', 'squad']]
     stats_table_df[cols_cleaning_stats] = stats_table_df[cols_cleaning_stats].apply(
         lambda x: x.str.replace('-', '0').str.replace("[,']", '').astype(float))
 
@@ -596,20 +626,29 @@ def get_player_summary(player_name, player_code):
     injury_html = BeautifulSoup(injury_request.content)
     injury_request.close()
 
-    injury_table = parse_table(injury_html.find(class_='items'))
-    injury_table_df = pd.DataFrame(injury_table[1:], columns=injury_table[0])
-    injury_table_df.columns = [col.lower().replace(' ', '_') for col in injury_table_df.columns]
+    if injury_html.find(class_='items') is not None:
+        injury_table = parse_table(injury_html.find(class_='items'))
+        injury_table_df = pd.DataFrame(injury_table[1:], columns=injury_table[0])
+        injury_table_df.columns = [col.lower().replace(' ', '_') for col in injury_table_df.columns]
 
-    # Cleaning
-    injury_table_df['days'] = injury_table_df['days'].str.replace(' days', '').astype(float)
-    injury_table_df['games_missed'] = injury_table_df['games_missed'].str.replace('-', '0').astype(float)
-    injury_table_df[['from', 'until']] = injury_table_df[['from', 'until']].apply(lambda x: pd.to_datetime(x))
+        # Cleaning
+        injury_table_df['days'] = injury_table_df['days'].str.replace(' days', '').astype(float)
+        injury_table_df['games_missed'] = injury_table_df['games_missed'].str.replace('-', '0').astype(float)
+        injury_table_df[['from', 'until']] = injury_table_df[['from', 'until']].apply(lambda x: pd.to_datetime(x))
+
+    else:
+        injury_table_df = pd.DataFrame()
 
     # Final dictionary----------
     player_dict = {'foot': foot,
+                   'citizenship': citizenship,
+                   'main_position': main_position,
+                   'secondary_position': secondary_positions,
                    'height': height,
                    'transfer_history': player_transfer_df,
                    'performance_stats': stats_table_df,
                    'injury_history': injury_table_df}
 
     return player_dict
+
+
